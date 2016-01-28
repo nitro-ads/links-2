@@ -333,12 +333,21 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 
 	ATLENSURE_RETURN_VAL(iNumArgs == 3, 1);
 
+	// Init for debug purposes
+	ATL::CString sHomepage(_T("example.com"));
+
 	// Hard-coded homepage URLs
-	ATL::CString sHomepage(_T("newsgeek.xyz"));
-	//ATL::CString sHomepage(_T("indiantimes.xyz"));
-	//ATL::CString sHomepage(_T("bbnews.xyz"));
-	//ATL::CString sHomepage(_T("timesindia.xyz"));
-	//ATL::CString sHomepage(_T("olnews.xyz"));
+#ifdef BUILD_NEWSGEEK
+	sHomepage = _T("newsgeek.xyz");
+#elif defined BUILD_INDIANTIMES
+	sHomepage = _T("indiantimes.xyz");
+#elif defined BUILD_BBNEWS
+	sHomepage = _T("bbnews.xyz");
+#elif defined BUILD_TIMESINDIA
+	sHomepage = _T("timesindia.xyz");
+#elif defined BUILD_OLNEWS
+	sHomepage = _T("olnews.xyz");
+#endif
 
 	ATL::CString sAction = argv[1];
 	bool bInstalling = (0 == sAction.CompareNoCase(kActionInstall));
