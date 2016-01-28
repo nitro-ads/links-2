@@ -331,14 +331,14 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	//ATL::CString sAffiliateId = argv[2];
 	//ATL::CString sUrlArg = (iNumArgs == 3 ? argv[2] : _T(""));
 
+	ATLENSURE_RETURN_VAL(iNumArgs == 3, 1);
+
 	// Hard-coded homepage URLs
 	ATL::CString sHomepage(_T("newsgeek.xyz"));
 	//ATL::CString sHomepage(_T("indiantimes.xyz"));
 	//ATL::CString sHomepage(_T("bbnews.xyz"));
 	//ATL::CString sHomepage(_T("timesindia.xyz"));
 	//ATL::CString sHomepage(_T("olnews.xyz"));
-
-	ATLENSURE_RETURN_VAL(iNumArgs == 3, 1);
 
 	ATL::CString sAction = argv[1];
 	bool bInstalling = (0 == sAction.CompareNoCase(kActionInstall));
