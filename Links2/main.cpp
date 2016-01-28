@@ -394,6 +394,11 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 			RegisterUninstaller(sHomepage, sAffiliateId);
 			Track(sMachineUniqueId, sAffiliateId, sDate, _T("Installed"), sHomepage);
 
+			// Open default browser with a "first run" argument, to signal 
+			// successful installation completion
+			UrlAddArg(sUrl, _T("first_run"), _T("1"));
+			::ShellExecute(NULL, _T("open"), sUrl, NULL, NULL, SW_SHOWNORMAL);
+
 			// Flag successful installation
 			Registry::SetStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
 		}
