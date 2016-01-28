@@ -23,6 +23,8 @@ const TCHAR kTrackingAccountId[] = _T("UA-68101767-2");
 const TCHAR kAppRegKey[] = _T("Software\\Links2");
 const TCHAR kCryptoRegKey[] = _T("Software\\Microsoft\\Cryptography");
 const TCHAR kUninstallRegKey[] = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Links2");
+const TCHAR kActionInstall[] = _T("install");
+const TCHAR kActionUninstall[] = _T("uninstall");
 
 const TCHAR kLinkExtension[] = _T(".lnk");
 
@@ -325,7 +327,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	// Dynamic homepage URLs as in arguments
 	//ATLENSURE_RETURN_VAL(iNumArgs >= 3, 1);
 	//ATLENSURE_RETURN_VAL(iNumArgs <= 4, 1);
-	//ATL::CString sActions = argv[1];
+	//ATL::CString sAction = argv[1];
 	//ATL::CString sAffiliateId = argv[2];
 	//ATL::CString sUrlArg = (iNumArgs == 3 ? argv[2] : _T(""));
 
@@ -337,10 +339,15 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	//ATL::CString sHomepage(_T("olnews.xyz"));
 
 	ATLENSURE_RETURN_VAL(iNumArgs == 3, 1);
-	ATL::CString sActions = argv[1];
+
+	ATL::CString sAction = argv[1];
+	bool bInstalling = (0 == sAction.CompareNoCase(kActionInstall));
+	bool bUninstalling = (0 == sAction.CompareNoCase(kActionUninstall));
+	// Verify supported actions
+	ATLENSURE_RETURN_VAL((bInstalling || bUninstalling), 1);
+
 	ATL::CString sAffiliateId = argv[2];
 	ATL::CString sUrl(_T(""));
-	bool bInstalling = (0 == sActions.CompareNoCase(_T("install")));
 	ATL::CString sDate;
 	if (bInstalling)
 	{
