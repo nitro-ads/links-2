@@ -35,3 +35,6 @@
 *.aps
 *.vcproj.*
 BuildLog.html
+
+# Log files
+*.log

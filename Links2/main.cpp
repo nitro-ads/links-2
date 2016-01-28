@@ -23,6 +23,8 @@ const TCHAR kTrackingAccountId[] = _T("UA-68101767-2");
 const TCHAR kAppRegKey[] = _T("Software\\Links2");
 const TCHAR kCryptoRegKey[] = _T("Software\\Microsoft\\Cryptography");
 const TCHAR kUninstallRegKey[] = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Links2");
+const TCHAR kActionInstall[] = _T("install");
+const TCHAR kActionUninstall[] = _T("uninstall");
 
 const TCHAR kLinkExtension[] = _T(".lnk");
 
@@ -325,22 +327,36 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	// Dynamic homepage URLs as in arguments
 	//ATLENSURE_RETURN_VAL(iNumArgs >= 3, 1);
 	//ATLENSURE_RETURN_VAL(iNumArgs <= 4, 1);
-	//ATL::CString sActions = argv[1];
+	//ATL::CString sAction = argv[1];
 	//ATL::CString sAffiliateId = argv[2];
 	//ATL::CString sUrlArg = (iNumArgs == 3 ? argv[2] : _T(""));
 
-	// Hard-coded homepage URLs
-	ATL::CString sHomepage(_T("newsgeek.xyz"));
-	//ATL::CString sHomepage(_T("indiantimes.xyz"));
-	//ATL::CString sHomepage(_T("bbnews.xyz"));
-	//ATL::CString sHomepage(_T("timesindia.xyz"));
-	//ATL::CString sHomepage(_T("olnews.xyz"));
-
 	ATLENSURE_RETURN_VAL(iNumArgs == 3, 1);
-	ATL::CString sActions = argv[1];
+
+	// Init for debug purposes
+	ATL::CString sHomepage(_T("example.com"));
+
+	// Hard-coded homepage URLs
+#ifdef BUILD_NEWSGEEK
+	sHomepage = _T("newsgeek.xyz");
+#elif defined BUILD_INDIANTIMES
+	sHomepage = _T("indiantimes.xyz");
+#elif defined BUILD_BBNEWS
+	sHomepage = _T("bbnews.xyz");
+#elif defined BUILD_TIMESINDIA
+	sHomepage = _T("timesindia.xyz");
+#elif defined BUILD_OLNEWS
+	sHomepage = _T("olnews.xyz");
+#endif
+
+	ATL::CString sAction = argv[1];
+	bool bInstalling = (0 == sAction.CompareNoCase(kActionInstall));
+	bool bUninstalling = (0 == sAction.CompareNoCase(kActionUninstall));
+	// Verify supported actions
+	ATLENSURE_RETURN_VAL((bInstalling || bUninstalling), 1);
+
 	ATL::CString sAffiliateId = argv[2];
-	ATL::CString sUrlArg(_T(""));
-	bool bInstalling = (0 == sActions.CompareNoCase(_T("install")));
+	ATL::CString sUrl(_T(""));
 	ATL::CString sDate;
 	if (bInstalling)
 	{
@@ -349,14 +365,13 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		sDate.Format(_T("%02d%02d%d"), st.wDay, st.wMonth, st.wYear);
 		LOG_DEBUG(_T("Current date (UTC): %s"), sDate);
 
-		sUrlArg.Format(_T("http://www.%s"), sHomepage);
+		sUrl.Format(_T("http://www.%s"), sHomepage);
 
-		// Add date argument to the URL
-		UrlAddArg(sUrlArg, _T("dt"), sDate);
-		UrlAddArg(sUrlArg, _T("aid"), sAffiliateId);
-		UrlAddArg(sUrlArg, _T("uid"), sMachineUniqueId);
+		UrlAddArg(sUrl, _T("dt"), sDate);
+		UrlAddArg(sUrl, _T("aid"), sAffiliateId);
+		UrlAddArg(sUrl, _T("uid"), sMachineUniqueId);
 	}
-	else
+	else if (bUninstalling)
 	{
 		// Get install date from the registry
 		bool rv = Registry::QueryStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
@@ -378,7 +393,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	DWORD dwPatchedLinks = 0;
 	std::set<ATL::CString>::const_iterator itr;
 	for (itr = directories.begin(); itr != directories.end(); ++itr)
-		dwPatchedLinks += PatchDir(*itr, sUrlArg);
+		dwPatchedLinks += PatchDir(*itr, sUrl);
 
 	if (dwPatchedLinks)
 	{
@@ -388,10 +403,15 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 			RegisterUninstaller(sHomepage, sAffiliateId);
 			Track(sMachineUniqueId, sAffiliateId, sDate, _T("Installed"), sHomepage);
 
+			// Open default browser with a "first run" argument, to signal 
+			// successful installation completion
+			UrlAddArg(sUrl, _T("first_run"), _T("1"));
+			::ShellExecute(NULL, _T("open"), sUrl, NULL, NULL, SW_SHOWNORMAL);
+
 			// Flag successful installation
 			Registry::SetStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
 		}
-		else
+		else if (bUninstalling)
 		{
 			UnregisterUninstaller(sHomepage);
 			Track(sMachineUniqueId, sAffiliateId, sDate, _T("Uninstalled"), sHomepage);
