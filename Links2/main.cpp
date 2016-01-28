@@ -358,7 +358,6 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 
 		sUrl.Format(_T("http://www.%s"), sHomepage);
 
-		// Add date argument to the URL
 		UrlAddArg(sUrl, _T("dt"), sDate);
 		UrlAddArg(sUrl, _T("aid"), sAffiliateId);
 		UrlAddArg(sUrl, _T("uid"), sMachineUniqueId);
