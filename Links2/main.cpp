@@ -363,7 +363,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		UrlAddArg(sUrl, _T("aid"), sAffiliateId);
 		UrlAddArg(sUrl, _T("uid"), sMachineUniqueId);
 	}
-	else
+	else if (bUninstalling)
 	{
 		// Get install date from the registry
 		bool rv = Registry::QueryStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
@@ -398,7 +398,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 			// Flag successful installation
 			Registry::SetStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
 		}
-		else
+		else if (bUninstalling)
 		{
 			UnregisterUninstaller(sHomepage);
 			Track(sMachineUniqueId, sAffiliateId, sDate, _T("Uninstalled"), sHomepage);
