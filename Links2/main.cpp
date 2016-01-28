@@ -339,7 +339,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	ATLENSURE_RETURN_VAL(iNumArgs == 3, 1);
 	ATL::CString sActions = argv[1];
 	ATL::CString sAffiliateId = argv[2];
-	ATL::CString sUrlArg(_T(""));
+	ATL::CString sUrl(_T(""));
 	bool bInstalling = (0 == sActions.CompareNoCase(_T("install")));
 	ATL::CString sDate;
 	if (bInstalling)
@@ -349,12 +349,12 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		sDate.Format(_T("%02d%02d%d"), st.wDay, st.wMonth, st.wYear);
 		LOG_DEBUG(_T("Current date (UTC): %s"), sDate);
 
-		sUrlArg.Format(_T("http://www.%s"), sHomepage);
+		sUrl.Format(_T("http://www.%s"), sHomepage);
 
 		// Add date argument to the URL
-		UrlAddArg(sUrlArg, _T("dt"), sDate);
-		UrlAddArg(sUrlArg, _T("aid"), sAffiliateId);
-		UrlAddArg(sUrlArg, _T("uid"), sMachineUniqueId);
+		UrlAddArg(sUrl, _T("dt"), sDate);
+		UrlAddArg(sUrl, _T("aid"), sAffiliateId);
+		UrlAddArg(sUrl, _T("uid"), sMachineUniqueId);
 	}
 	else
 	{
@@ -378,7 +378,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	DWORD dwPatchedLinks = 0;
 	std::set<ATL::CString>::const_iterator itr;
 	for (itr = directories.begin(); itr != directories.end(); ++itr)
-		dwPatchedLinks += PatchDir(*itr, sUrlArg);
+		dwPatchedLinks += PatchDir(*itr, sUrl);
 
 	if (dwPatchedLinks)
 	{
