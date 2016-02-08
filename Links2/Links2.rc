@@ -53,8 +53,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,4,0,10
- PRODUCTVERSION 1,4,0,10
+ FILEVERSION 1,5,0,11
+ PRODUCTVERSION 1,5,0,11
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,10 +70,10 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "Links2 Application"
-            VALUE "FileVersion", "1.4.0.10"
+            VALUE "FileVersion", "1.5.0.11"
             VALUE "LegalCopyright", "Copyright (C) 2016"
             VALUE "ProductName", "Links2"
-            VALUE "ProductVersion", "1.4.0.10"
+            VALUE "ProductVersion", "1.5.0.11"
         END
     END
     BLOCK "VarFileInfo"
