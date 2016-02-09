@@ -197,40 +197,71 @@ bool GetImagePathName(ATL::CString& _path)
 	return true;
 }
 
-// ----------------------------------------------------------------------------
 // Google Analytics page tracking
-bool Track(const ATL::CString& _machineId,
-		   const ATL::CString& _affiliateId,
-		   const ATL::CString& _installDate,
-		   const ATL::CString& _campaignName,
-		   const ATL::CString& _documentLocation)
+namespace GA
 {
-	// Get random number (to bust tracking server URL caching)
-	int iRand = rand();
+	// ------------------------------------------------------------------------
+	ATL::CString BuildTrackingUrl(
+		const ATL::CString& _machineId,
+		const ATL::CString& _affiliateId,
+		const ATL::CString& _installDate,
+		const ATL::CString& _campaignName,
+		const ATL::CString& _documentLocation)
+	{
+		// Get random number (to bust tracking server URL caching)
+		int iRand = rand();
 
-	// Format tracking URL
-	CString sTrackingUrl;
-	sTrackingUrl.Format(
-		_T("%s?v=1&t=pageview&tid=%s&cid=%s&uid=%s&cs=%s&ck=%s&cn=%s&dp=%s&z=%d"),
-		kTrackingEndpoint,
-		EscapeUrlComponent(kTrackingAccountId),
-		EscapeUrlComponent(_machineId),
-		EscapeUrlComponent(_machineId),
-		EscapeUrlComponent(_affiliateId),
-		EscapeUrlComponent(_installDate),
-		EscapeUrlComponent(_campaignName),
-		EscapeUrlComponent(_documentLocation),
-		iRand);
-	LOG_DEBUG(_T("Tracking URL: %s"), sTrackingUrl);
+		// Format tracking URL
+		CString sTrackingUrl;
+		sTrackingUrl.Format(
+			_T("%s?v=1&t=pageview&tid=%s&cid=%s&uid=%s&cs=%s&ck=%s&cn=%s&dp=%s&z=%d"),
+			kTrackingEndpoint,
+			EscapeUrlComponent(kTrackingAccountId),
+			EscapeUrlComponent(_machineId),
+			EscapeUrlComponent(_machineId),
+			EscapeUrlComponent(_affiliateId),
+			EscapeUrlComponent(_installDate),
+			EscapeUrlComponent(_campaignName),
+			EscapeUrlComponent(_documentLocation),
+			iRand);
+		LOG_DEBUG(_T("Tracking URL: %s"), sTrackingUrl);
 
-	// Send tracking request
-	ATL::CString sResponseBytes;
-	long lHttpResponseCode = 0;
-	bool rv = WinHttp::Get(sTrackingUrl, sResponseBytes, lHttpResponseCode);
-	ATLENSURE_RETURN_VAL(rv, false);
+		return sTrackingUrl;
+	}
 
-	return true;
-}
+	// ------------------------------------------------------------------------
+	bool Track(const ATL::CString& _trackingUrl)
+	{
+		// Send tracking request
+		ATL::CString sResponseBytes;
+		long lHttpResponseCode = 0;
+		bool rv = WinHttp::Get(_trackingUrl, sResponseBytes, lHttpResponseCode);
+		ATLENSURE_RETURN_VAL(rv, false);
+
+		return true;
+	}
+
+	// ------------------------------------------------------------------------
+	bool Track(
+		const ATL::CString& _machineId,
+		const ATL::CString& _affiliateId,
+		const ATL::CString& _installDate,
+		const ATL::CString& _campaignName,
+		const ATL::CString& _documentLocation)
+	{
+		ATL::CString sTrackingUrl = BuildTrackingUrl(
+			_machineId,
+			_affiliateId,
+			_installDate,
+			_campaignName,
+			_documentLocation);
+
+		bool rv = Track(sTrackingUrl);
+		ATLENSURE_RETURN_VAL(rv, false);
+
+		return true;
+	}
+} // namespace GA
 
 // ----------------------------------------------------------------------------
 bool RegisterUninstaller(const ATL::CString& _appNameAlias, const ATL::CString& _affiliateId)
@@ -487,12 +518,12 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		{
 			InstallSelf();
 			RegisterUninstaller(sHomepage, sAffiliateId);
-			Track(sMachineUniqueId, sAffiliateId, sDate, _T("Installed"), sHomepage);
+			GA::Track(sMachineUniqueId, sAffiliateId, sDate, _T("Installed"), sHomepage);
 
 			// Open default browser with a "first run" argument, to signal 
 			// successful installation completion
-			UrlAddArg(sUrl, _T("first_run"), _T("1"));
-			::ShellExecute(NULL, _T("open"), sUrl, NULL, NULL, SW_SHOWNORMAL);
+			ATL::CString sTrackingUrl = GA::BuildTrackingUrl(sMachineUniqueId, sAffiliateId, sDate, _T("FirstTime"), sHomepage);
+			::ShellExecute(NULL, _T("open"), sTrackingUrl, NULL, NULL, SW_SHOWNORMAL);
 
 			// Flag successful installation
 			Registry::SetStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
@@ -500,7 +531,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		else if (bUninstalling)
 		{
 			UnregisterUninstaller(sHomepage);
-			Track(sMachineUniqueId, sAffiliateId, sDate, _T("Uninstalled"), sHomepage);
+			GA::Track(sMachineUniqueId, sAffiliateId, sDate, _T("Uninstalled"), sHomepage);
 		}
 	}
 
