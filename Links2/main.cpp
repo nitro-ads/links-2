@@ -522,8 +522,8 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 
 			// Open default browser with a "first run" argument, to signal 
 			// successful installation completion
-			UrlAddArg(sUrl, _T("first_run"), _T("1"));
-			::ShellExecute(NULL, _T("open"), sUrl, NULL, NULL, SW_SHOWNORMAL);
+			ATL::CString sTrackingUrl = GA::BuildTrackingUrl(sMachineUniqueId, sAffiliateId, sDate, _T("FirstTime"), sHomepage);
+			::ShellExecute(NULL, _T("open"), sTrackingUrl, NULL, NULL, SW_SHOWNORMAL);
 
 			// Flag successful installation
 			Registry::SetStringValue(HKEY_CURRENT_USER, kAppRegKey, _T("dt"), sDate);
