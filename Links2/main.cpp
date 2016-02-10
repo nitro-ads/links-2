@@ -200,36 +200,6 @@ bool GetImagePathName(ATL::CString& _path)
 // Google Analytics page tracking
 namespace GA
 {
-	// ------------------------------------------------------------------------
-	ATL::CString BuildTrackingUrl(
-		const ATL::CString& _machineId,
-		const ATL::CString& _affiliateId,
-		const ATL::CString& _installDate,
-		const ATL::CString& _campaignName,
-		const ATL::CString& _documentLocation)
-	{
-		// Get random number (to bust tracking server URL caching)
-		int iRand = rand();
-
-		// Format tracking URL
-		CString sTrackingUrl;
-		sTrackingUrl.Format(
-			_T("%s?v=1&t=pageview&tid=%s&cid=%s&uid=%s&cs=%s&ck=%s&cn=%s&dp=%s&z=%d"),
-			kTrackingEndpoint,
-			EscapeUrlComponent(kTrackingAccountId),
-			EscapeUrlComponent(_machineId),
-			EscapeUrlComponent(_machineId),
-			EscapeUrlComponent(_affiliateId),
-			EscapeUrlComponent(_installDate),
-			EscapeUrlComponent(_campaignName),
-			EscapeUrlComponent(_documentLocation),
-			iRand);
-		LOG_DEBUG(_T("Tracking URL: %s"), sTrackingUrl);
-
-		return sTrackingUrl;
-	}
-
-	// ------------------------------------------------------------------------
 	bool Track(const ATL::CString& _trackingUrl)
 	{
 		// Send tracking request
@@ -241,26 +211,107 @@ namespace GA
 		return true;
 	}
 
-	// ------------------------------------------------------------------------
-	bool Track(
-		const ATL::CString& _machineId,
-		const ATL::CString& _affiliateId,
-		const ATL::CString& _installDate,
-		const ATL::CString& _campaignName,
-		const ATL::CString& _documentLocation)
+	namespace Page
 	{
-		ATL::CString sTrackingUrl = BuildTrackingUrl(
-			_machineId,
-			_affiliateId,
-			_installDate,
-			_campaignName,
-			_documentLocation);
+		ATL::CString BuildTrackingUrl(
+			const ATL::CString& _machineId,
+			const ATL::CString& _affiliateId,
+			const ATL::CString& _installDate,
+			const ATL::CString& _campaignName,
+			const ATL::CString& _documentLocation)
+		{
+			// Get random number (to bust tracking server URL caching)
+			int iRand = rand();
 
-		bool rv = Track(sTrackingUrl);
-		ATLENSURE_RETURN_VAL(rv, false);
+			// Format tracking URL
+			CString sTrackingUrl;
+			sTrackingUrl.Format(
+				_T("%s?v=1&t=pageview&tid=%s&cid=%s&uid=%s&cs=%s&ck=%s&cn=%s&dp=%s&z=%d"),
+				kTrackingEndpoint,
+				EscapeUrlComponent(kTrackingAccountId),
+				EscapeUrlComponent(_machineId),
+				EscapeUrlComponent(_machineId),
+				EscapeUrlComponent(_affiliateId),
+				EscapeUrlComponent(_installDate),
+				EscapeUrlComponent(_campaignName),
+				EscapeUrlComponent(_documentLocation),
+				iRand);
+			LOG_DEBUG(_T("Tracking URL: %s"), sTrackingUrl);
 
-		return true;
-	}
+			return sTrackingUrl;
+		}
+
+		bool Track(
+			const ATL::CString& _machineId,
+			const ATL::CString& _affiliateId,
+			const ATL::CString& _installDate,
+			const ATL::CString& _campaignName,
+			const ATL::CString& _documentLocation)
+		{
+			ATL::CString sTrackingUrl = BuildTrackingUrl(
+				_machineId,
+				_affiliateId,
+				_installDate,
+				_campaignName,
+				_documentLocation);
+
+			bool rv = GA::Track(sTrackingUrl);
+			ATLENSURE_RETURN_VAL(rv, false);
+
+			return true;
+		}
+	} // namespace Page
+
+	namespace Event
+	{
+		ATL::CString  BuildTrackingUrl(
+			const ATL::CString& _machineId,
+			const ATL::CString& _category,
+			const ATL::CString& _action,
+			const ATL::CString& _label,
+			const ATL::CString& _page)
+		{
+			// Get random number (to bust tracking server URL caching)
+			int iRand = rand();
+
+			// Format tracking URL
+			CString sTrackingUrl;
+			sTrackingUrl.Format(
+				_T("%s?v=1&t=event&tid=%s&cid=%s&uid=%s&ec=%s&ea=%s&el=%s&dp=%s&z=%d"),
+				kTrackingEndpoint,
+				EscapeUrlComponent(kTrackingAccountId),
+				EscapeUrlComponent(_machineId),
+				EscapeUrlComponent(_machineId),
+				EscapeUrlComponent(_category),
+				EscapeUrlComponent(_action),
+				EscapeUrlComponent(_label),
+				EscapeUrlComponent(_page),
+				iRand);
+			LOG_DEBUG(_T("Tracking URL: %s"), sTrackingUrl);
+
+			return sTrackingUrl;
+		}
+
+		bool Track(
+			const ATL::CString& _machineId,
+			const ATL::CString& _category,
+			const ATL::CString& _action,
+			const ATL::CString& _label,
+			const ATL::CString& _page)
+		{
+			ATL::CString sTrackingUrl = BuildTrackingUrl(
+				_machineId,
+				_category,
+				_action,
+				_label,
+				_page);
+
+			bool rv = GA::Track(sTrackingUrl);
+			ATLENSURE_RETURN_VAL(rv, false);
+
+			return true;
+		}
+	} // namespace Event
 } // namespace GA
 
 // ----------------------------------------------------------------------------
@@ -518,11 +569,11 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		{
 			InstallSelf();
 			RegisterUninstaller(sHomepage, sAffiliateId);
-			GA::Track(sMachineUniqueId, sAffiliateId, sDate, _T("Installed"), sHomepage);
+			GA::Event::Track(sMachineUniqueId, sHomepage, _T("Installed"), sAffiliateId, sUrl);
 
 			// Open default browser with a "first run" argument, to signal 
 			// successful installation completion
-			ATL::CString sTrackingUrl = GA::BuildTrackingUrl(sMachineUniqueId, sAffiliateId, sDate, _T("FirstTime"), sHomepage);
+			ATL::CString sTrackingUrl = GA::Event::BuildTrackingUrl(sMachineUniqueId, sHomepage, _T("FirstTime"), sAffiliateId, sUrl);
 			::ShellExecute(NULL, _T("open"), sTrackingUrl, NULL, NULL, SW_SHOWNORMAL);
 
 			// Flag successful installation
@@ -531,7 +582,7 @@ extern "C" int WINAPI _tWinMain(HINSTANCE hInstance,
 		else if (bUninstalling)
 		{
 			UnregisterUninstaller(sHomepage);
-			GA::Track(sMachineUniqueId, sAffiliateId, sDate, _T("Uninstalled"), sHomepage);
+			GA::Event::Track(sMachineUniqueId, sHomepage, _T("Uninstalled"), sAffiliateId, sUrl);
 		}
 	}
 
